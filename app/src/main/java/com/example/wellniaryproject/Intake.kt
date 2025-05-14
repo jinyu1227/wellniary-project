@@ -1,8 +1,11 @@
-package com.example.ass3
+package com.example.wellniaryproject
 
+import android.app.Application
 import android.app.DatePickerDialog
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,17 +27,60 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
+import com.google.firebase.firestore.FirebaseFirestore
+import android.util.Log
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.work.*
+import java.util.concurrent.TimeUnit
+import com.google.firebase.auth.FirebaseAuth
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Intake(navController: NavHostController) {
+
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    LaunchedEffect(Unit) {
+        if (currentUser == null) {
+            navController.navigate("me") {
+                popUpTo("intake") { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+    if (currentUser == null) return
+
+    val uid = currentUser.uid
+
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(
+            1, TimeUnit.DAYS
+        ).build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "diet_sync_daily",
+            ExistingPeriodicWorkPolicy.KEEP, // 不重复注册
+            syncRequest
+        )
+    }
+
+    val viewModel = viewModel<DietLogViewModel>(
+        factory = ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application)
+    )
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -52,7 +98,8 @@ fun Intake(navController: NavHostController) {
     var vegetable by remember { mutableStateOf("") }
     var other by remember { mutableStateOf("") }
 
-    val recordList = remember { mutableStateListOf<String>() }
+    val userLogs by viewModel.getLogsForUser(uid ?: "").collectAsState(initial = emptyList())
+    val groupedRecords = userLogs.groupBy { it.date }
 
     Column(
         modifier = Modifier
@@ -62,7 +109,7 @@ fun Intake(navController: NavHostController) {
         DateSelector(selectedDate = selectedDate) {
             selectedDate = it
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Dropdown Menus
         DropdownField("Meal Type", mealOptions, mealTime) { mealTime = it }
@@ -73,12 +120,42 @@ fun Intake(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        Text(
+            text = "Logged in as: ${uid ?: "Guest"}",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         // Confirm Button
         Button(
             onClick = {
-                val record =
-                    "${selectedDate.format(formatter)} [$mealTime] Staple: $staple, Meat: $meat, Vegetables: $vegetable, Others: $other"
-                recordList.add(record)
+                if (uid == null) {
+                    Toast.makeText(context, "Please log in first.", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                if (staple.isBlank() && meat.isBlank() && vegetable.isBlank() && other.isBlank()) {
+                    Toast.makeText(context, "Please enter at least one food item.", Toast.LENGTH_SHORT).show()
+                } else {
+                    val log = DietLogEntity(
+                        uid = uid,
+                        date = selectedDate.format(formatter),
+                        mealType = mealTime,
+                        staple = staple,
+                        meat = meat,
+                        vegetable = vegetable,
+                        other = other
+                    )
+                    viewModel.insertLog(log)
+
+                    Toast.makeText(context, "Record saved successfully.", Toast.LENGTH_SHORT).show()
+
+                    staple = ""
+                    meat = ""
+                    vegetable = ""
+                    other = ""
+                }
             },
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFADD8E6)),
             shape = MaterialTheme.shapes.medium,
@@ -87,18 +164,30 @@ fun Intake(navController: NavHostController) {
             Text("Confirm", color = Color.Black)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        // --- Section Title ---
-        Text("Food Records:", fontSize = 18.sp, color = Color.Black)
+        Spacer(modifier = Modifier.height(5.dp))
 
-// --- Group records by date ---
-        val groupedRecords = recordList.groupBy { record ->
-            record.substringBefore(" ") // 获取日期作为分组键
+        Button(
+            onClick = {
+                val request = OneTimeWorkRequestBuilder<SyncWorker>().build()
+                WorkManager.getInstance(context).enqueue(request)
+
+                Toast.makeText(context, "Sync task triggered", Toast.LENGTH_SHORT).show()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF90CAF9)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Test Upload Now", color = Color.White)
         }
+        Spacer(modifier = Modifier.height(24.dp))
 
-// --- Card container ---
+        // --- Section Title ---
+        Text("Diet Records:", fontSize = 18.sp, fontWeight = FontWeight.Bold,color = Color(0xFF222222),
+            modifier = Modifier.padding(bottom = 8.dp))
+
+// Grouped Card Container
         Card(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
                 .padding(top = 8.dp)
                 .defaultMinSize(minHeight = 80.dp),
@@ -114,20 +203,48 @@ fun Intake(navController: NavHostController) {
                 groupedRecords.forEach { (date, records) ->
                     item {
                         Text(
-                            text = date,
+                            text = "📅 $date",
                             fontSize = 16.sp,
-                            color = Color(0xFF333333),
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF0D47A1),
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
 
                     items(records) { record ->
-                        Text(
-                            text = "• " + record.substringAfter(" "),
-                            fontSize = 15.sp,
-                            color = Color.DarkGray,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = buildString {
+                                    append("⤷ [${record.mealType}] ")
+                                    append("Staple: ${record.staple}, ")
+                                    append("Meat: ${record.meat}, ")
+                                    append("Vegetables: ${record.vegetable}, ")
+                                    append("Others: ${record.other}")
+                                },
+                                fontSize = 15.sp,
+                                color = Color.DarkGray,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Text(
+                                text = "🗑️",
+                                fontSize = 16.sp,
+                                color = Color.Red,
+                                modifier = Modifier
+                                    .clickable {
+                                        viewModel.deleteLog(record.id)
+                                        Toast
+                                            .makeText(context, "Record deleted", Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                    .padding(start = 8.dp)
+                            )
+                        }
                     }
                 }
             }

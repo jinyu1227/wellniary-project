@@ -11,6 +11,8 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
+import androidx.compose.material.SnackbarHost
+import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
@@ -22,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,8 +40,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.wellniaryproject.ui.theme.BottomNavigationBarTheme
 import androidx.core.view.WindowCompat
-import com.example.ass3.Intake
+import com.example.wellniaryproject.Intake
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
@@ -47,10 +52,15 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
         val viewModel: UserDataViewModel by viewModels()
         setContent {
-            BottomNavigationBarTheme {
+            var showSplash by remember { mutableStateOf(true) }
+
+            if (showSplash) {
+                SplashScreen(onFinish = { showSplash = false })
+            } else {
                 BottomNavigationBar(viewModel)
             }
         }
+
     }
 }
 
@@ -68,48 +78,62 @@ fun BottomNavigationBar(viewModel: UserDataViewModel) {
         NavRoute("me", Icons.Filled.Person, "Me")
     )
     val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
+    val startDestination = if (isLoggedIn) "home" else "me"
 
     val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         bottomBar = {
             BottomNavigation(
                 modifier = Modifier.padding(bottom = 20.dp),
                 backgroundColor = Color(0xFFADD8E6)
-            ) //light blue color
-            {
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
+
                 navRoutes.forEach { navRoute ->
                     BottomNavigationItem(
-                        icon = { Icon(navRoute.icon, contentDescription =
-                            navRoute.label) },
+                        icon = { Icon(navRoute.icon, contentDescription = navRoute.label) },
                         label = { Text(navRoute.label) },
                         selected = currentDestination?.route == navRoute.route,
                         onClick = {
-                            navController.navigate(navRoute.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    inclusive = false
+                            val currentUser = FirebaseAuth.getInstance().currentUser
+                            val isAllowed = currentUser != null || navRoute.route == "me"
+
+                            if (isAllowed) {
+                                navController.navigate(navRoute.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("You're not logged in. Please sign in to continue.")
+                                }
                             }
                         }
                     )
                 }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "me",
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("home") { Home(navController) }
             composable("intake") { Intake(navController) }
-            composable("report") { ReportScreen(navController) }
+            composable("report") { Report(navController) }
             composable("me") { Me(navController) }
         }
     }
+
 }
 
 class UserDataViewModel : ViewModel() {
