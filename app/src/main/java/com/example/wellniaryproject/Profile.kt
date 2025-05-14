@@ -91,7 +91,7 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Color(0xFFFAFAFA))
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(16.dp).height(200.dp).statusBarsPadding(),
+            modifier = Modifier.fillMaxWidth().padding(16.dp).height(240.dp).statusBarsPadding(),
             shape = RoundedCornerShape(12.dp),
             color = Color.Transparent,
             shadowElevation = 2.dp
@@ -282,17 +282,59 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
     }
 
     if (showHeightDialog) {
-        InputDialog("Edit Height (cm)", height, onDismiss = { showHeightDialog = false }, onConfirm = {
-            height = it
+        InputDialog("Edit Height (cm)", height, onDismiss = { showHeightDialog = false }, onConfirm = { newValue ->
+            height = newValue
             showHeightDialog = false
+
+            val updatedProfile = UserProfile(
+                uid = uid,
+                email = email,
+                username = editedUsername,
+                birthday = birthday,
+                gender = gender,
+                state = state,
+                height = newValue,
+                weight = weight
+            )
+
+            CoroutineScope(Dispatchers.IO).launch {
+                dao.insertProfile(updatedProfile)
+                FirebaseDatabase.getInstance()
+                    .reference
+                    .child("users")
+                    .child(uid)
+                    .setValue(updatedProfile)
+            }
         })
     }
+
     if (showWeightDialog) {
-        InputDialog("Edit Weight (kg)", weight, onDismiss = { showWeightDialog = false }, onConfirm = {
-            weight = it
+        InputDialog("Edit Weight (kg)", weight, onDismiss = { showWeightDialog = false }, onConfirm = { newValue ->
+            weight = newValue
             showWeightDialog = false
+
+            val updatedProfile = UserProfile(
+                uid = uid,
+                email = email,
+                username = editedUsername,
+                birthday = birthday,
+                gender = gender,
+                state = state,
+                height = height,
+                weight = newValue
+            )
+
+            CoroutineScope(Dispatchers.IO).launch {
+                dao.insertProfile(updatedProfile)
+                FirebaseDatabase.getInstance()
+                    .reference
+                    .child("users")
+                    .child(uid)
+                    .setValue(updatedProfile)
+            }
         })
     }
+
 }
 
 @Composable

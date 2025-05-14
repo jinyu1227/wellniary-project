@@ -48,7 +48,7 @@ import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun Form(navController: NavHostController) {
+fun Intake(navController: NavHostController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -281,7 +281,7 @@ fun Form(navController: NavHostController) {
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun DropdownFieldold(
+fun DropdownField(
     label: String,
     options: List<String>,
     selected: String,
@@ -341,7 +341,7 @@ fun DropdownFieldold(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DateSelectorold(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
+fun DateSelector(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
     val context = LocalContext.current
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
