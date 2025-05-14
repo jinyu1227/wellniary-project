@@ -56,6 +56,7 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
     var usernameError by remember { mutableStateOf(false) }
     var birthdayError by remember { mutableStateOf(false) }
     var genderError by remember { mutableStateOf(false) }
+    var stateError by remember { mutableStateOf(false) }
     var heightError by remember { mutableStateOf(false) }
     var weightError by remember { mutableStateOf(false) }
 
@@ -141,7 +142,7 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
                 value = editedUsername,
                 onValueChange = {
                     editedUsername = it
-                    usernameError = it.isBlank()
+                    usernameError = it.isBlank() || it.length > 20
                 },
                 enabled = isEditing,
                 isError = usernameError,
@@ -149,6 +150,14 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                 singleLine = true
             )
+            if (usernameError) {
+                Text(
+                    text = if (editedUsername.isBlank()) "Username is required." else "Username too long (max 20 characters).",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
             if (usernameError) Text("Username is required.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
 
             OutlinedTextField(
@@ -208,23 +217,37 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
 
             OutlinedTextField(
                 value = state,
-                onValueChange = { state = it },
+                onValueChange = {
+                    state = it
+                    stateError = it.length > 20
+                },
                 enabled = isEditing,
                 label = { Text("State") },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                 singleLine = true
             )
 
+            if (stateError) {
+                Text(
+                    text = "State too long (max 20 characters).",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
             if (isEditing) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = {
-                    usernameError = editedUsername.isBlank()
+                    usernameError = editedUsername.isBlank() || editedUsername.length > 20
                     birthdayError = birthday.isBlank()
                     genderError = gender.isBlank()
+                    genderError = gender.isBlank()
+                    stateError = state.length > 20
                     heightError = height.toFloatOrNull() == null || height.toFloatOrNull()!! !in 50f..300f
                     weightError = weight.toFloatOrNull() == null || weight.toFloatOrNull()!! !in 10f..500f
 
-                    if (!usernameError && !birthdayError && !genderError && !heightError && !weightError) {
+                    if (!usernameError && !birthdayError && !genderError && !stateError && !heightError && !weightError) {
                         val userProfile = UserProfile(
                             uid = uid,
                             email = email,
@@ -263,8 +286,8 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         StatCard(title = "Health Info") {
-            EditableStatBox(height, "Height (cm)", isEditing) { showHeightDialog = true }
-            EditableStatBox(weight, "Weight (kg)", isEditing) { showWeightDialog = true }
+            EditableStatBox(height, "Height (cm)", editable = !isEditing) { showHeightDialog = true }
+            EditableStatBox(weight, "Weight (kg)", editable = !isEditing) { showWeightDialog = true }
         }
 
         if (heightError) Text("Height must be between 50 and 300 cm.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
@@ -345,28 +368,66 @@ fun EditableStatBox(value: String, label: String, editable: Boolean, onClick: ()
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1A237E),
-            modifier = Modifier.clickable { onClick() }
+            modifier = if (editable) Modifier.clickable { onClick() } else Modifier
         )
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
     }
 }
 
 @Composable
-fun InputDialog(title: String, value: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun InputDialog(
+    title: String,
+    value: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
     var input by remember { mutableStateOf(value) }
+    var isError by remember { mutableStateOf(false) }
+
+    val errorMessage = when (title) {
+        "Edit Height (cm)" -> "Height must be between 50 and 300 cm."
+        "Edit Weight (kg)" -> "Weight must be between 10 and 500 kg."
+        else -> "Invalid input"
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                label = { Text("Value") },
-                singleLine = true
-            )
+            Column {
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = {
+                        input = it
+                        isError = false
+                    },
+                    isError = isError,
+                    label = { Text("Value") },
+                    singleLine = true
+                )
+                if (isError) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(input) }) {
+            TextButton(onClick = {
+                val number = input.toFloatOrNull()
+                isError = when (title) {
+                    "Edit Height (cm)" -> number == null || number !in 50f..300f
+                    "Edit Weight (kg)" -> number == null || number !in 10f..500f
+                    else -> true
+                }
+
+                if (!isError) {
+                    onConfirm(input)
+                }
+            }) {
                 Text("OK")
             }
         },
@@ -377,6 +438,7 @@ fun InputDialog(title: String, value: String, onDismiss: () -> Unit, onConfirm: 
         }
     )
 }
+
 
 fun calculateBMI(heightCm: Float?, weightKg: Float?): Float? {
     if (heightCm == null || heightCm <= 0f || weightKg == null) return null
