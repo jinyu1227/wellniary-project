@@ -148,9 +148,26 @@ fun Login(
                                     .child("users").child(uid).setValue(userMap)
                                 onSuccessLogin()
                             }
-                            .addOnFailureListener {
+                            .addOnFailureListener  {
                                 Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
-                                loginError = it.localizedMessage ?: "Login failed"
+
+                                loginError = when {
+                                    it.message?.contains("There is no user record", ignoreCase = true) == true ||
+                                            it.message?.contains("no user corresponding", ignoreCase = true) == true -> {
+                                        "Your e-mail is not available"
+                                    }
+
+                                    it.message?.contains("The password is invalid", ignoreCase = true) == true -> {
+                                        "Invalid password"
+                                    }
+
+                                    else -> {
+                                        it.localizedMessage ?: "Login failed"
+                                    }
+                                }
+
+                                // ✅ 显式 print
+                                println("LoginError = $loginError")
                             }
                     }
                 },
@@ -166,6 +183,7 @@ fun Login(
             if (loginError != null) {
                 Text(loginError!!, color = Color.Red, fontSize = 12.sp)
             }
+
 
             TextButton(onClick = {
                 onSwitchToSignup()  // ✅ 回调控制切换注册页
@@ -185,6 +203,8 @@ fun Login(
                         launcher.launch(googleSignInClient.signInIntent)
                     }
                 },
+
+
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFADD8E6)),
                 modifier = Modifier
                     .fillMaxWidth()
