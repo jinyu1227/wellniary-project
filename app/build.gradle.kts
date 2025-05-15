@@ -5,9 +5,18 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.11" // ✅ 与 Kotlin 2.x 兼容的版本
+    }
     namespace = "com.example.wellniaryproject"
     compileSdk = 35
 
@@ -79,7 +88,7 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-auth:20.7.0")
 
-    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation(libs.androidx.activity.compose.v182)
     implementation("androidx.compose.material:material-icons-extended")
 
 }
