@@ -1,9 +1,11 @@
 [versions]
 activityComposeVersion = "1.7.2"
-agp = "8.2.2"
+agp = "8.9.1"
+androidxActivityCompose = "1.8.2"
+androidxActivityComposeVersion = "1.5.0"
 firebaseBom = "33.13.0"
 firebaseBomVersion = "32.7.0"
-kotlin = "1.9.22"
+kotlin = "2.1.0"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -16,11 +18,15 @@ materialIconsExtended = "<version>"
 materialIconsExtendedVersion = "1.7.8"
 navigationCompose = "2.8.9"
 roomRuntime = "2.7.1"
-ksp = "2.0.21-1.0.26"
+kspVersion = "2.1.0-1.0.29"
+compose = "1.5.0"
+ui = "1.5.0"
 workRuntimeKtx = "2.10.1"
 
 [libraries]
+androidx-activity-compose-v150 = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityComposeVersion" }
 androidx-activity-compose-v172 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
+androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -50,11 +56,14 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version = "2.9.0" }
 google-auth = { group = "com.google.android.gms", name = "play-services-auth", version = "21.0.0" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp"}
+ksp = { id = "com.google.devtools.ksp", version.ref = "kspVersion"}
 google-services = { id = "com.google.gms.google-services", version = "4.4.1" }
 android-library = { id = "com.android.library", version = "8.8.1" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
