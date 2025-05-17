@@ -6,6 +6,8 @@ import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.wellniaryproject.HealthViewModel
 
 @Composable
 fun Me(navController: NavHostController) {
@@ -15,6 +17,7 @@ fun Me(navController: NavHostController) {
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
+    val healthViewModel: HealthViewModel = viewModel()
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
@@ -74,7 +77,8 @@ fun Me(navController: NavHostController) {
                     FirebaseAuth.getInstance().signOut()
                     currentUser = null
                     isLogin = true
-                }
+                },
+                        healthViewModel = healthViewModel
             )
         }
     }
