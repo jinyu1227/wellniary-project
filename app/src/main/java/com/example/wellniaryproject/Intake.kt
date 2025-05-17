@@ -205,74 +205,14 @@ fun Intake(navController: NavHostController) {
 //        }
         Spacer(modifier = Modifier.height(10.dp))
 
-        // --- Section Title ---
-        Text("Diet Records:", fontSize = 18.sp, fontWeight = FontWeight.Bold,color = Color(0xFF222222),
-            modifier = Modifier.padding(bottom = 5.dp))
-
-// Grouped Card Container
-        Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .defaultMinSize(minHeight = 80.dp),
-            backgroundColor = Color(0xFFF0F8FF),
-            shape = RoundedCornerShape(16.dp),
-            elevation = 4.dp
+        Button(
+            onClick = {
+                navController.navigate("dietRecords")
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFE3F2FD)),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
-                groupedRecords.forEach { (date, records) ->
-                    item {
-                        Text(
-                            text = "📅 $date",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF0D47A1),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-
-                    items(records) { record ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = buildString {
-                                    append("⤷ [${record.mealType}] ")
-                                    append("Staple: ${record.staple}, ")
-                                    append("Meat: ${record.meat}, ")
-                                    append("Vegetables: ${record.vegetable}, ")
-                                    append("Others: ${record.other}")
-                                },
-                                fontSize = 15.sp,
-                                color = Color.DarkGray,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Text(
-                                text = "🗑️",
-                                fontSize = 16.sp,
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .clickable {
-                                        viewModel.deleteLog(record.id)
-                                        Toast
-                                            .makeText(context, "Record deleted", Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                    .padding(start = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
+            Text("View Diet Records", color = Color.Black)
         }
 
 

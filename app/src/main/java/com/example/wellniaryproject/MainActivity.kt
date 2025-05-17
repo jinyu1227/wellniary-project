@@ -131,6 +131,7 @@ fun BottomNavigationBar(viewModel: UserDataViewModel) {
             composable("intake") { Intake(navController) }
             composable("report") { Report(navController) }
             composable("me") { Me(navController) }
+            composable("dietRecords") { DietRecordsScreen(navController) }
         }
     }
 
