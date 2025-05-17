@@ -31,6 +31,7 @@ import com.example.wellniaryproject.AppDatabase
 import com.example.wellniaryproject.UserProfile
 import com.google.firebase.database.FirebaseDatabase
 import java.util.*
+import com.example.wellniaryproject.AchievementSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -270,6 +271,25 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
         if (heightError) Text("Height must be between 50 and 300 cm.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
         if (weightError) Text("Weight must be between 10 and 500 kg.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
 
+
+        Button(
+            onClick = { navController.navigate("achievement_detail") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B7DB1))
+        ) {
+            Text("View My Achievements", fontSize = 16.sp, color = Color.White)
+        }
+
+
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+
+
+
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = { onLogout() },
@@ -280,6 +300,10 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
             Text("Log out", fontSize = 16.sp, color = Color.White)
         }
     }
+
+
+
+
 
     if (showHeightDialog) {
         InputDialog("Edit Height (cm)", height, onDismiss = { showHeightDialog = false }, onConfirm = {
@@ -377,3 +401,4 @@ fun StatBox(value: String, label: String) {
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
     }
 }
+

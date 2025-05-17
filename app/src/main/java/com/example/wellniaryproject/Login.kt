@@ -26,6 +26,22 @@ import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.ktx.firestore
+import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.util.*
+
+fun recordLoginToday() {
+    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+    Firebase.firestore.collection("loginHistory")
+        .document(uid)
+        .collection("dates")
+        .document(today)
+        .set(mapOf("loggedIn" to true))
+}
+
 
 @Composable
 fun Login(
@@ -55,6 +71,17 @@ fun Login(
                 if (authResult.isSuccessful) {
                     val user = auth.currentUser
                     val uid = user?.uid ?: return@addOnCompleteListener
+
+                    val db = Firebase.firestore
+                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                    db.collection("loginHistory")
+                        .document(uid)
+                        .collection("dates")
+                        .document(today)
+                        .set(mapOf("loggedIn" to true))
+
+
+                    recordLoginToday()
 
                     onSuccessLogin()
                 } else {
@@ -146,6 +173,7 @@ fun Login(
                                 )
                                 FirebaseDatabase.getInstance().reference
                                     .child("users").child(uid).setValue(userMap)
+                                recordLoginToday()
                                 onSuccessLogin()
                             }
                             .addOnFailureListener  {

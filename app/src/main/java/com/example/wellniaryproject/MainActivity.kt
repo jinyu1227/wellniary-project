@@ -32,6 +32,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.wellniaryproject.HealthViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 data class NavRoute(val route:String, val icon: ImageVector, val label: String)
@@ -60,6 +62,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun BottomNavigationBar(){
+    val healthViewModel: HealthViewModel = viewModel()
     val navRoutes = listOf(
         NavRoute("home", Icons.Filled.Home,"Home"),
         NavRoute("form", Icons.Filled.Edit,"Intake"),
@@ -100,10 +103,11 @@ fun BottomNavigationBar(){
             startDestination = "home",
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable("home") { Home(navController) }
+            composable("home") { Home(navController, healthViewModel = healthViewModel) }
             composable("form") { Form(navController) }
             composable("report") { Report(navController) }
             composable ("me"){ Me(navController)}
+            composable("achievement_detail") { AchievementDetailScreen(viewModel = healthViewModel) }
         }
     }
 }
