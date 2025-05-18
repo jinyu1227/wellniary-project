@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "564369390556",
+    "project_id": "wellniaryproject",
+    "storage_bucket": "wellniaryproject.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564369390556:android:adc808e55ad863c57fed19",
+        "android_client_info": {
+          "package_name": "com.example.wellniaryproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "564369390556-noa5t73nahq2r00lsdnrs0gmkgfqjses.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.wellniaryproject",
+            "certificate_hash": "0ffcce7533f8b18f490a5e3d40820576b6c422e0"
+          }
+        },
+        {
+          "client_id": "564369390556-q318lhh116hq5gdq91imj3vvqt1831nj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3zf7IJB_G8y-fnIXEOqNBBoMm4WOIObI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "564369390556-q318lhh116hq5gdq91imj3vvqt1831nj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
