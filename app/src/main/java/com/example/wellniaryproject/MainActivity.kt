@@ -39,11 +39,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.core.view.WindowCompat
-import com.example.wellniaryproject.Intake
 import com.example.wellniaryproject.ui.theme.Ass3Theme
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -131,7 +129,7 @@ fun BottomNavigationBar(viewModel: UserDataViewModel) {
             composable("intake") { Intake(navController) }
             composable("report") { Report(navController) }
             composable("me") { Me(navController) }
-            composable("dietRecords") { DietRecordsScreen(navController) }
+            composable("dietRecords") { DietRecordsScreen(navController)}
         }
     }
 

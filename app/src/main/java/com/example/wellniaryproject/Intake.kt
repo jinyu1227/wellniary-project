@@ -88,7 +88,7 @@ fun Intake(navController: NavHostController) {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             "diet_sync_daily",
-            ExistingPeriodicWorkPolicy.KEEP, // 不重复注册
+            ExistingPeriodicWorkPolicy.KEEP, // No duplicate registration
             syncRequest
         )
     }
@@ -145,14 +145,6 @@ fun Intake(navController: NavHostController) {
             Text(nutritionInfo, fontSize = 14.sp, color = Color.DarkGray, modifier = Modifier.padding(bottom = 8.dp))
         }
 
-//        Spacer(modifier = Modifier.height(16.dp))
-
-//        Text(
-//            text = "Logged in as: ${uid ?: "Guest"}",
-//            fontSize = 14.sp,
-//            color = Color.Gray,
-//            modifier = Modifier.padding(bottom = 8.dp)
-//        )
         // Confirm Button
         Button(
             onClick = {
@@ -190,19 +182,19 @@ fun Intake(navController: NavHostController) {
         }
 
 //        Spacer(modifier = Modifier.height(5.dp))
-//
-//        Button(
-//            onClick = {
-//                val request = OneTimeWorkRequestBuilder<SyncWorker>().build()
-//                WorkManager.getInstance(context).enqueue(request)
-//
-//                Toast.makeText(context, "Sync task triggered", Toast.LENGTH_SHORT).show()
-//            },
-//            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF90CAF9)),
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            Text("Test Upload Now", color = Color.White)
-//        }
+
+        Button(
+            onClick = {
+                val request = OneTimeWorkRequestBuilder<SyncWorker>().build()
+                WorkManager.getInstance(context).enqueue(request)
+
+                Toast.makeText(context, "Sync task triggered", Toast.LENGTH_SHORT).show()
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF90CAF9)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Test Upload Now", color = Color.White)
+        }
         Spacer(modifier = Modifier.height(10.dp))
 
         Button(
@@ -287,7 +279,6 @@ fun DateSelector(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
 
     var showPicker by remember { mutableStateOf(false) }
 
-    // ⬇️ 今日按钮 + 图标
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -297,7 +288,7 @@ fun DateSelector(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
         Button(
             onClick = { showPicker = true },
             colors = ButtonDefaults.buttonColors(
-                backgroundColor = Color(0xFFDDEFF3) // 淡蓝背景
+                backgroundColor = Color(0xFFDDEFF3)
             ),
             shape = RoundedCornerShape(24.dp),
             elevation = ButtonDefaults.elevation(defaultElevation = 4.dp),
@@ -317,7 +308,6 @@ fun DateSelector(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
         }
     }
 
-    // ⬇️ 日期选择器弹窗
     if (showPicker) {
         DatePickerDialog(
             context,
