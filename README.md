@@ -43,7 +43,7 @@ Wellniary is a wellness-tracking Android application built with **Kotlin** and *
 |------------------|---------------------------------------------------------------|
 | Language         | Kotlin                                                        |
 | UI Framework     | Jetpack Compose, Material 3                                   |
-| Architecture     | MVVM, ViewModel, StateFlow, CoroutineScope, **WorkManager**   |
+| Architecture     | MVVM, ViewModel, StateFlow, CoroutineScope, WorkManager       |
 | Database         | Room (Local), Firebase Realtime DB & Firestore                |
 | Networking       | Retrofit + Gson + Nutritionix Food API                        |
 | Auth             | Firebase Auth (Email & Google)                                |
