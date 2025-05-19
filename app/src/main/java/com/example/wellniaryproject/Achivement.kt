@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 fun AchievementSection(navController: NavController, viewModel: HealthViewModel) {
     LaunchedEffect(Unit) {
         viewModel.loadHealthDataFromFirebase()
+        viewModel.loadGoals()
     }
     val mugCount = viewModel.currentMugCount
     val mugTarget = viewModel.dailyMugTarget
@@ -68,6 +69,7 @@ fun AchievementDetailScreen(healthViewModel: HealthViewModel,navController: NavC
     LaunchedEffect(Unit) {
         healthViewModel.loadHealthDataFromFirebase()
         healthViewModel.checkLoginStreak()
+        healthViewModel.loadGoals()
     }
 
     val waterUnlocked = healthViewModel.currentMugCount >= healthViewModel.dailyMugTarget
