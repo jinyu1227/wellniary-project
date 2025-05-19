@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 
 @Composable
 fun AchievementSection(navController: NavController, viewModel: HealthViewModel) {
+    LaunchedEffect(Unit) {
+        viewModel.loadHealthDataFromFirebase()
+    }
     val mugCount = viewModel.currentMugCount
     val mugTarget = viewModel.dailyMugTarget
     val currentWeight = viewModel.currentWeight
@@ -62,6 +65,16 @@ fun AchievementSection(navController: NavController, viewModel: HealthViewModel)
 
 @Composable
 fun AchievementDetailScreen(healthViewModel: HealthViewModel,navController: NavController) {
+    LaunchedEffect(Unit) {
+        healthViewModel.loadHealthDataFromFirebase()
+        healthViewModel.checkLoginStreak()
+    }
+
+    val waterUnlocked = healthViewModel.currentMugCount >= healthViewModel.dailyMugTarget
+    val weightUnlocked = healthViewModel.currentWeight <= healthViewModel.targetWeight
+    val loginUnlocked = healthViewModel.consecutiveLoginUnlocked
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -69,8 +82,6 @@ fun AchievementDetailScreen(healthViewModel: HealthViewModel,navController: NavC
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
-
-
         TopAppBar(
             title = { Text("Achievement Details") },
             navigationIcon = {
@@ -78,34 +89,32 @@ fun AchievementDetailScreen(healthViewModel: HealthViewModel,navController: NavC
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
-            backgroundColor = Color.White,
+            backgroundColor = Color(0xFFCCE5FF),
             contentColor = Color.Black
         )
-
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F9FF)) // 类似 Me 页面的 Health Info 背景
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F9FF))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 AchievementDetailItem(
-                    description = " Reached target amount of water",
-                    unlocked = healthViewModel.waterGoalAchieved
+                    description = "Reached target amount of water",
+                    unlocked = waterUnlocked
                 )
 
                 AchievementDetailItem(
-                    description = " Reached target weight",
-                    unlocked = healthViewModel.weightGoalAchieved
+                    description = "Reached target weight",
+                    unlocked = weightUnlocked
                 )
 
                 AchievementDetailItem(
-                    description = " Logged in 7 days straight",
-                    unlocked = healthViewModel.consecutiveLoginUnlocked
+                    description = "Logged in 7 consecutive days",
+                    unlocked = loginUnlocked
                 )
             }
         }
-
     }
 }
 
