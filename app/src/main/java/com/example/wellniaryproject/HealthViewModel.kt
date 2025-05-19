@@ -28,8 +28,13 @@ class HealthViewModel : ViewModel() {
 
     var targetWeight by mutableStateOf(70f)
 
+    var waterGoalAchieved by mutableStateOf(false)
+    var weightGoalAchieved by mutableStateOf(false)
+
+
     var consecutiveLoginUnlocked by mutableStateOf(false)
-        private set
+    private set
+
 
     fun checkLoginStreak() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
