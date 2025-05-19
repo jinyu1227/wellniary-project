@@ -4,10 +4,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 
-// 返回的 JSON 是 List<Quote>
 data class Quote(
-    val q: String, // Quote 内容
-    val a: String  // 作者
+    val q: String,
+    val a: String
 )
 
 interface ZenQuoteService {

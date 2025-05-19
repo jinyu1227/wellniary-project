@@ -26,11 +26,23 @@ fun Signup(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
+    var usernameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
     var firebaseError by remember { mutableStateOf<String?>(null) }
-    var showErrors by remember { mutableStateOf(false) }
+
+    fun validateUsername(input: String): String? =
+        if (input.length > 20) "Username must be ≤ 20 characters" else null
+
+    fun validateEmail(input: String): String? =
+        if (input.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(input).matches()) "Invalid email" else null
+
+    fun validatePassword(input: String): String? =
+        if (input.length < 8 || input.none { it.isUpperCase() }) "Password must be ≥8 and contain a capital letter" else null
+
+    fun validateConfirmPassword(confirm: String, password: String): String? =
+        if (confirm != password) "Passwords do not match" else null
 
     Column(
         modifier = Modifier
@@ -44,21 +56,31 @@ fun Signup(
 
         OutlinedTextField(
             value = username,
-            onValueChange = { username = it },
+            onValueChange = {
+                username = it
+                usernameError = validateUsername(it)
+            },
             label = { Text("Username") },
+            isError = usernameError != null,
             modifier = Modifier.fillMaxWidth()
         )
+        if (usernameError != null) {
+            Text(usernameError!!, color = Color.Red, fontSize = 12.sp)
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = validateEmail(it)
+            },
             label = { Text("Email Address") },
-            isError = showErrors && emailError != null,
+            isError = emailError != null,
             modifier = Modifier.fillMaxWidth()
         )
-        if (showErrors && emailError != null) {
+        if (emailError != null) {
             Text(emailError!!, color = Color.Red, fontSize = 12.sp)
         }
 
@@ -66,13 +88,17 @@ fun Signup(
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = validatePassword(it)
+                confirmPasswordError = validateConfirmPassword(confirmPassword, it)
+            },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            isError = showErrors && passwordError != null,
+            isError = passwordError != null,
             modifier = Modifier.fillMaxWidth()
         )
-        if (showErrors && passwordError != null) {
+        if (passwordError != null) {
             Text(passwordError!!, color = Color.Red, fontSize = 12.sp)
         }
 
@@ -86,13 +112,16 @@ fun Signup(
 
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it },
+            onValueChange = {
+                confirmPassword = it
+                confirmPasswordError = validateConfirmPassword(it, password)
+            },
             label = { Text("Confirm Password") },
             visualTransformation = PasswordVisualTransformation(),
-            isError = showErrors && confirmPasswordError != null,
+            isError = confirmPasswordError != null,
             modifier = Modifier.fillMaxWidth()
         )
-        if (showErrors && confirmPasswordError != null) {
+        if (confirmPasswordError != null) {
             Text(confirmPasswordError!!, color = Color.Red, fontSize = 12.sp)
         }
 
@@ -104,28 +133,16 @@ fun Signup(
         ) {
             Button(
                 onClick = {
-                    showErrors = true
+                    usernameError = validateUsername(username)
+                    emailError = validateEmail(email)
+                    passwordError = validatePassword(password)
+                    confirmPasswordError = validateConfirmPassword(confirmPassword, password)
 
-                    emailError = when {
-                        email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Invalid email"
-                        else -> null
-                    }
-
-                    passwordError = when {
-                        password.length < 8 || password.none { it.isUpperCase() } ->
-                            "Password must be ≥8 and contain a capital letter"
-                        else -> null
-                    }
-
-                    confirmPasswordError = if (confirmPassword != password) {
-                        "Passwords do not match"
-                    } else null
-
-                    if (emailError == null && passwordError == null && confirmPasswordError == null) {
+                    if (usernameError == null && emailError == null && passwordError == null && confirmPasswordError == null) {
                         FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
                             .addOnSuccessListener {
                                 firebaseError = null
-                                onRegisterSuccess() // ✅ 切回登录页
+                                onRegisterSuccess()
                             }
                             .addOnFailureListener {
                                 Log.e("Signup", "Firebase error: ${it.localizedMessage}", it)
@@ -153,3 +170,5 @@ fun Signup(
         }
     }
 }
+
+
