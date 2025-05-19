@@ -13,6 +13,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+
 
 
 @Composable
@@ -54,22 +61,28 @@ fun AchievementSection(navController: NavController, viewModel: HealthViewModel)
 }
 
 @Composable
-fun AchievementDetailScreen(healthViewModel: HealthViewModel) {
+fun AchievementDetailScreen(healthViewModel: HealthViewModel,navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9)) // 背景可自定义
+            .background(Color(0xFFF9F9F9))
             .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
-        Text(
-            text = "Achievement Details",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+
+
+        TopAppBar(
+            title = { Text("Achievement Details") },
+            navigationIcon = {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            backgroundColor = Color.White,
+            contentColor = Color.Black
         )
 
-        // 包裹成就内容的统一卡片
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -92,8 +105,11 @@ fun AchievementDetailScreen(healthViewModel: HealthViewModel) {
                 )
             }
         }
+
     }
 }
+
+
 
 @Composable
 fun AchievementIcon(title: String, unlocked: Boolean) {
@@ -116,6 +132,7 @@ fun AchievementIcon(title: String, unlocked: Boolean) {
 fun AchievementDetailItem(description: String, unlocked: Boolean) {
     val statusText = if (unlocked) "✅ Unlocked" else "🔒 Locked"
     val statusColor = if (unlocked) Color(0xFF198754) else Color.Gray
+
 
     Card(
         modifier = Modifier
