@@ -8,5 +8,7 @@ import androidx.room.PrimaryKey
 data class DailyRecord(
     @PrimaryKey val date: String = "",
     val waterCount: Int = 0,
-    val weight: Float = 0f
+    val weight: Float = 0f,
+    val waterGoal: Int = 8,
+    val weightGoal: Float = 60f
 )

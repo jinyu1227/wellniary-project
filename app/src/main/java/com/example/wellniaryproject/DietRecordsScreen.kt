@@ -19,20 +19,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+
+data class FirebaseDietLog(
+    val log: DietLogEntity,
+    val docId: String
+)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DietRecordsScreen(
-    navController: NavHostController,
-    viewModel: DietLogViewModel = viewModel()
-) {
+fun DietRecordsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val uid = FirebaseAuth.getInstance().currentUser?.uid
-    val userLogs by viewModel.getLogsForUser(uid ?: "").collectAsState(initial = emptyList())
-    val groupedRecords = userLogs.groupBy { it.date }
+    val coroutineScope = rememberCoroutineScope()
+
+    var userLogs by remember { mutableStateOf<List<FirebaseDietLog>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            userLogs = fetchDietLogsFromFirebase(uid)
+        }
+        isLoading = false
+    }
+
+    val groupedRecords = userLogs.groupBy { it.log.date }
 
     Scaffold(
         topBar = {
@@ -48,73 +63,150 @@ fun DietRecordsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            Card(
+        if (isLoading) {
+            Box(
                 modifier = Modifier
-                    .fillMaxSize(),
-                backgroundColor = Color(0xFFF0F8FF),
-                shape = RoundedCornerShape(16.dp),
-                elevation = 4.dp
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxSize(),
+                    backgroundColor = Color(0xFFF0F8FF),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = 4.dp
                 ) {
-                    groupedRecords.forEach { (date, records) ->
-                        item {
-                            Text(
-                                text = "📅 $date",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF0D47A1),
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-
-                        items(records) { record ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        if (groupedRecords.isEmpty()) {
+                            item {
                                 Text(
-                                    text = buildString {
-                                        append("⤷ [${record.mealType}] ")
-                                        append("Staple: ${record.staple}, ")
-                                        append("Meat: ${record.meat}, ")
-                                        append("Vegetables: ${record.vegetable}, ")
-                                        append("Others: ${record.other}")
-                                    },
-                                    fontSize = 15.sp,
-                                    color = Color.DarkGray,
-                                    modifier = Modifier.weight(1f)
+                                    text = "No diet records found.",
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(16.dp)
                                 )
+                            }
+                        } else {
+                            groupedRecords.forEach { (date, records) ->
+                                item {
+                                    Text(
+                                        text = "📅 $date",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF0D47A1),
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
 
-                                Text(
-                                    text = "🗑️",
-                                    fontSize = 16.sp,
-                                    color = Color.Red,
-                                    modifier = Modifier
-                                        .clickable {
-                                            viewModel.deleteLog(record.id)
-                                            Toast
-                                                .makeText(context, "Record deleted", Toast.LENGTH_SHORT)
-                                                .show()
-                                        }
-                                        .padding(start = 8.dp)
-                                )
+                                items(records) { firebaseLog ->
+                                    val record = firebaseLog.log
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = buildString {
+                                                append("⤷ [${record.mealType}] ")
+                                                append("Staple: ${record.staple}, ")
+                                                append("Meat: ${record.meat}, ")
+                                                append("Vegetables: ${record.vegetable}, ")
+                                                append("Others: ${record.other}")
+                                            },
+                                            fontSize = 15.sp,
+                                            color = Color.DarkGray,
+                                            modifier = Modifier.weight(1f)
+                                        )
+
+                                        Text(
+                                            text = "🗑️",
+                                            fontSize = 16.sp,
+                                            color = Color.Red,
+                                            modifier = Modifier
+                                                .clickable {
+                                                    uid?.let { userId ->
+                                                        coroutineScope.launch {
+                                                            val success = deleteDietLogFromFirebase(firebaseLog.docId)
+                                                            if (success) {
+                                                                userLogs = fetchDietLogsFromFirebase(userId)
+                                                                Toast.makeText(context, "Record deleted", Toast.LENGTH_SHORT).show()
+                                                            } else {
+                                                                Toast.makeText(context, "Deletion failed", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                .padding(start = 8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+suspend fun fetchDietLogsFromFirebase(uid: String): List<FirebaseDietLog> {
+    return try {
+        val snapshot = FirebaseFirestore.getInstance()
+            .collection("dietLogs")
+            .whereEqualTo("uid", uid)
+            .get()
+            .await()
+
+        snapshot.documents.mapNotNull { doc ->
+            val date = doc.getString("date") ?: return@mapNotNull null
+            val mealType = doc.getString("mealType") ?: ""
+            val staple = doc.getString("staple") ?: ""
+            val meat = doc.getString("meat") ?: ""
+            val vegetable = doc.getString("vegetable") ?: ""
+            val other = doc.getString("other") ?: ""
+
+            FirebaseDietLog(
+                log = DietLogEntity(
+                    uid = uid,
+                    date = date,
+                    mealType = mealType,
+                    staple = staple,
+                    meat = meat,
+                    vegetable = vegetable,
+                    other = other
+                ),
+                docId = doc.id
+            )
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        emptyList()
+    }
+}
+
+suspend fun deleteDietLogFromFirebase(docId: String): Boolean {
+    return try {
+        FirebaseFirestore.getInstance()
+            .collection("dietLogs")
+            .document(docId)
+            .delete()
+            .await()
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
     }
 }
