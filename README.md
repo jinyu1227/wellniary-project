@@ -19,6 +19,7 @@ Wellniary is a wellness-tracking Android application built with **Kotlin** and *
 - Daily intake logging with meal type (Breakfast, Lunch, Dinner) and categories: Staple, Meat, Vegetable, Other
 - Nutritional data fetched from the **Nutritionix API**
 - Data is synced both **locally (Room DB)** and **remotely (Firebase Firestore)**
+- Background sync is handled automatically via **WorkManager**
 
 ### 💧 Health Tracking
 - Daily water intake and body weight tracking
