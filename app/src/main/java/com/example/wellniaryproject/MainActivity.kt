@@ -134,7 +134,7 @@ fun BottomNavigationBar(viewModel: UserDataViewModel) {
             composable("form") { Form(navController) }
             composable("report") { Report(navController) }
             composable ("me"){ Me(navController)}
-            composable("achievement_detail") { AchievementDetailScreen(healthViewModel) }
+            composable("achievement_detail") { AchievementDetailScreen(healthViewModel = healthViewModel, navController = navController) }
         }
     }
 
