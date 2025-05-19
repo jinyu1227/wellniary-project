@@ -26,22 +26,9 @@ import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.firestore.ktx.firestore
-import java.time.LocalDate
 import java.text.SimpleDateFormat
-import java.util.*
-
-fun recordLoginToday() {
-    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-    Firebase.firestore.collection("loginHistory")
-        .document(uid)
-        .collection("dates")
-        .document(today)
-        .set(mapOf("loggedIn" to true))
-}
-
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun Login(
@@ -71,17 +58,46 @@ fun Login(
                 if (authResult.isSuccessful) {
                     val user = auth.currentUser
                     val uid = user?.uid ?: return@addOnCompleteListener
+                    val email = user.email ?: ""
 
-                    val db = Firebase.firestore
-                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                    db.collection("loginHistory")
-                        .document(uid)
-                        .collection("dates")
-                        .document(today)
-                        .set(mapOf("loggedIn" to true))
+                    val userRef = FirebaseDatabase.getInstance().reference.child("users").child(uid)
+                    userRef.get().addOnSuccessListener { snapshot ->
+                        if (!snapshot.exists()) {
+                            val profile = UserProfile(
+                                uid = uid,
+                                email = email,
+                                username = email.substringBefore("@"),
+                                birthday = "",
+                                gender = "",
+                                state = "",
+                                height = "",
+                                weight = ""
+                            )
+                            userRef.setValue(profile).addOnCompleteListener {
+                                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                                val loginRef = FirebaseDatabase.getInstance().reference
+                                    .child("loginHistory")
+                                    .child(uid)
+                                    .child(today)
+
+                                loginRef.setValue(true)
 
 
-                    recordLoginToday()
+                                onSuccessLogin() // ✅ 等写完再跳
+                            }
+                        } else {
+                            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                            val loginRef = FirebaseDatabase.getInstance().reference
+                                .child("loginHistory")
+                                .child(uid)
+                                .child(today)
+
+                            loginRef.setValue(true)
+                            onSuccessLogin() // ✅ 已有数据，直接跳
+                        }
+                    }
+
+
 
                     onSuccessLogin()
                 } else {
@@ -165,37 +181,25 @@ fun Login(
                         auth.signInWithEmailAndPassword(username, password)
                             .addOnSuccessListener {
                                 val user = auth.currentUser
-                                val uid = user?.uid ?: return@addOnSuccessListener
-                                val userMap = mapOf(
-                                    "name" to (user.displayName ?: ""),
-                                    "email" to (user.email ?: ""),
-                                    "uid" to uid
-                                )
-                                FirebaseDatabase.getInstance().reference
-                                    .child("users").child(uid).setValue(userMap)
-                                recordLoginToday()
-                                onSuccessLogin()
-                            }
-                            .addOnFailureListener  {
-                                Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
+                                if (user != null) {
+                                    val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                                    val loginRef = FirebaseDatabase.getInstance().reference
+                                        .child("loginHistory")
+                                        .child(user.uid)
+                                        .child(today)
 
-                                loginError = when {
-                                    it.message?.contains("There is no user record", ignoreCase = true) == true ||
-                                            it.message?.contains("no user corresponding", ignoreCase = true) == true -> {
-                                        "Your e-mail is not available"
-                                    }
-
-                                    it.message?.contains("The password is invalid", ignoreCase = true) == true -> {
-                                        "Invalid password"
-                                    }
-
-                                    else -> {
-                                        it.localizedMessage ?: "Login failed"
-                                    }
+                                    loginRef.setValue(true)
+                                    onSuccessLogin() // ✅ 只触发成功登录，不写入数据库
                                 }
+                            }
+                            .addOnFailureListener {
+                                Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
+                                loginError = it.localizedMessage ?: "Login failed"
+                            }
 
-                                // ✅ 显式 print
-                                println("LoginError = $loginError")
+                            .addOnFailureListener {
+                                Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
+                                loginError = it.localizedMessage ?: "Login failed"
                             }
                     }
                 },
@@ -211,7 +215,6 @@ fun Login(
             if (loginError != null) {
                 Text(loginError!!, color = Color.Red, fontSize = 12.sp)
             }
-
 
             TextButton(onClick = {
                 onSwitchToSignup()  // ✅ 回调控制切换注册页
@@ -231,8 +234,6 @@ fun Login(
                         launcher.launch(googleSignInClient.signInIntent)
                     }
                 },
-
-
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFADD8E6)),
                 modifier = Modifier
                     .fillMaxWidth()
