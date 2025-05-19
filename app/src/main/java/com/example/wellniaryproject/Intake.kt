@@ -9,7 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.*
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -36,35 +38,48 @@ import androidx.navigation.NavHostController
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-import com.google.firebase.firestore.FirebaseFirestore
-import android.util.Log
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 import com.google.firebase.auth.FirebaseAuth
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import kotlinx.coroutines.launch
 
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Intake(navController: NavHostController) {
-
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    LaunchedEffect(Unit) {
-        if (currentUser == null) {
-            navController.navigate("me") {
-                popUpTo("intake") { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
-    if (currentUser == null) return
-
-    val uid = currentUser.uid
-
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val viewModel = viewModel<DietLogViewModel>(
+        factory = ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application)
+    )
+
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+
+    // Dropdown options
+    val mealOptions = listOf("Breakfast", "Lunch", "Dinner")
+    val stapleOptions = listOf("Rice", "Bread", "Noodles")
+    val meatOptions = listOf("Chicken", "Beef", "Pork", "Fish")
+    val vegetableOptions = listOf("Carrot", "Spinach", "Broccoli")
+    val otherOptions = listOf("Egg", "Fruit", "Soup", "Yogurt")
+
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    // User selections
+    var mealTime by remember { mutableStateOf(mealOptions.first()) }
+    var staple by remember { mutableStateOf("") }
+    var meat by remember { mutableStateOf("") }
+    var vegetable by remember { mutableStateOf("") }
+    var other by remember { mutableStateOf("") }
+
+    var nutritionInfo by remember { mutableStateOf("") }
+
+    val userLogs by viewModel.getLogsForUser(uid ?: "").collectAsState(initial = emptyList())
+    val groupedRecords = userLogs.groupBy { it.date }
+
 
     LaunchedEffect(Unit) {
         val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(
@@ -78,55 +93,66 @@ fun Intake(navController: NavHostController) {
         )
     }
 
-    val viewModel = viewModel<DietLogViewModel>(
-        factory = ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application)
-    )
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    fun fetchNutritionInfo(foodName: String) {
+        nutritionInfo = "Loading..."
+        coroutineScope.launch {
+            try {
+                val response = RetrofitBuilder.apiService.getNutritionInfo(
+                    NutritionRequest(query = foodName)
+                )
+                val food = response.foods.firstOrNull()
+                nutritionInfo = if (food != null) {
+                    "\uD83D\uDD25 ${food.nf_calories} kcal | \uD83E\uDD69 ${food.nf_protein}g protein | \uD83E\uDDC8 ${food.nf_total_fat}g fat"
+                } else {
+                    "No data found."
+                }
+            } catch (e: Exception) {
+                nutritionInfo = "Error fetching nutrition data."
+            }
+        }
+    }
 
-    // Dropdown options
-    val mealOptions = listOf("Breakfast", "Lunch", "Dinner")
-    val stapleOptions = listOf("Rice", "Bread", "Noodles")
-    val meatOptions = listOf("Chicken", "Beef", "Pork", "Fish")
-    val vegetableOptions = listOf("Carrot", "Spinach", "Broccoli")
-    val otherOptions = listOf("Egg", "Fruit", "Soup", "Yogurt")
-
-    // User selections
-    var mealTime by remember { mutableStateOf(mealOptions.first()) }
-    var staple by remember { mutableStateOf("") }
-    var meat by remember { mutableStateOf("") }
-    var vegetable by remember { mutableStateOf("") }
-    var other by remember { mutableStateOf("") }
-
-    val userLogs by viewModel.getLogsForUser(uid ?: "").collectAsState(initial = emptyList())
-    val groupedRecords = userLogs.groupBy { it.date }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState())
+        .padding(16.dp)
     ) {
         DateSelector(selectedDate = selectedDate) {
             selectedDate = it
         }
-        Spacer(modifier = Modifier.height(10.dp))
 
-        // Dropdown Menus
         DropdownField("Meal Type", mealOptions, mealTime) { mealTime = it }
-        DropdownField("Staple Food", stapleOptions, staple) { staple = it }
-        DropdownField("Meat", meatOptions, meat) { meat = it }
-        DropdownField("Vegetables", vegetableOptions, vegetable) { vegetable = it }
-        DropdownField("Others", otherOptions, other) { other = it }
+        DropdownField("Staple Food", stapleOptions, staple) {
+            staple = it
+            fetchNutritionInfo(it)
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        DropdownField("Meat", meatOptions, meat) {
+            meat = it
+            fetchNutritionInfo(it)
+        }
 
-        Text(
-            text = "Logged in as: ${uid ?: "Guest"}",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        DropdownField("Vegetables", vegetableOptions, vegetable) {
+            vegetable = it
+            fetchNutritionInfo(it)
+        }
+        DropdownField("Others", otherOptions, other) {
+            other = it
+            fetchNutritionInfo(it)
+        }
 
+        if (nutritionInfo.isNotBlank()) {
+            Text(nutritionInfo, fontSize = 14.sp, color = Color.DarkGray, modifier = Modifier.padding(bottom = 8.dp))
+        }
+
+//        Spacer(modifier = Modifier.height(16.dp))
+
+//        Text(
+//            text = "Logged in as: ${uid ?: "Guest"}",
+//            fontSize = 14.sp,
+//            color = Color.Gray,
+//            modifier = Modifier.padding(bottom = 8.dp)
+//        )
         // Confirm Button
         Button(
             onClick = {
@@ -134,7 +160,6 @@ fun Intake(navController: NavHostController) {
                     Toast.makeText(context, "Please log in first.", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-
                 if (staple.isBlank() && meat.isBlank() && vegetable.isBlank() && other.isBlank()) {
                     Toast.makeText(context, "Please enter at least one food item.", Toast.LENGTH_SHORT).show()
                 } else {
@@ -164,25 +189,25 @@ fun Intake(navController: NavHostController) {
             Text("Confirm", color = Color.Black)
         }
 
-        Spacer(modifier = Modifier.height(5.dp))
-
-        Button(
-            onClick = {
-                val request = OneTimeWorkRequestBuilder<SyncWorker>().build()
-                WorkManager.getInstance(context).enqueue(request)
-
-                Toast.makeText(context, "Sync task triggered", Toast.LENGTH_SHORT).show()
-            },
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF90CAF9)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Test Upload Now", color = Color.White)
-        }
-        Spacer(modifier = Modifier.height(24.dp))
+//        Spacer(modifier = Modifier.height(5.dp))
+//
+//        Button(
+//            onClick = {
+//                val request = OneTimeWorkRequestBuilder<SyncWorker>().build()
+//                WorkManager.getInstance(context).enqueue(request)
+//
+//                Toast.makeText(context, "Sync task triggered", Toast.LENGTH_SHORT).show()
+//            },
+//            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF90CAF9)),
+//            modifier = Modifier.fillMaxWidth()
+//        ) {
+//            Text("Test Upload Now", color = Color.White)
+//        }
+        Spacer(modifier = Modifier.height(10.dp))
 
         // --- Section Title ---
         Text("Diet Records:", fontSize = 18.sp, fontWeight = FontWeight.Bold,color = Color(0xFF222222),
-            modifier = Modifier.padding(bottom = 8.dp))
+            modifier = Modifier.padding(bottom = 5.dp))
 
 // Grouped Card Container
         Card(

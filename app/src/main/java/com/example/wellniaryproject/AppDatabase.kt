@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [DailyRecord::class, DietLogEntity::class, UserProfile::class],
-    version = 5,  // ⚠️ 更新版本号
+    entities = [DailyRecord::class, DietLogEntity::class, UserProfile::class, ReminderSetting::class],
+    version = 6,  // ⚠️ 更新版本号
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -15,6 +15,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyDao(): DailyDao
     abstract fun dietLogDao(): DietLogDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun reminderDao(): ReminderDao
 
     companion object {
         @Volatile

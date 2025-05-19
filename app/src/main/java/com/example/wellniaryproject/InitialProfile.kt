@@ -60,12 +60,14 @@ fun InitialProfile(
     var weightError by remember { mutableStateOf(false) }
 
     val calendar = Calendar.getInstance()
-    val datePickerDialog = remember {
+    fun showDatePicker() {
+        val calendar = Calendar.getInstance()
         DatePickerDialog(context, { _, year, month, dayOfMonth ->
             birthday = "%04d-%02d-%02d".format(year, month + 1, dayOfMonth)
             birthdayError = false
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
+
 
     Column(
         modifier = Modifier
@@ -96,23 +98,27 @@ fun InitialProfile(
         )
         if (usernameError) Text("Username is required", color = Color.Red, fontSize = 12.sp)
 
-        OutlinedTextField(
-            value = birthday,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Birthday *") },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { datePickerDialog.show() },
-            isError = birthdayError,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Black,
-                unfocusedBorderColor = Color.Gray,
-                disabledBorderColor = Color.LightGray,
-                disabledTextColor = Color.Black,
-                disabledLabelColor = Color.DarkGray
+                .clickable { showDatePicker() } // 外层处理点击
+        ) {
+            OutlinedTextField(
+                value = birthday,
+                onValueChange = {},
+                readOnly = true,
+                enabled = false, // ⛔ 禁止内部拦截点击
+                label = { Text("Birthday *") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = birthdayError,
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = Color.Black,
+                    disabledLabelColor = Color.Gray,
+                    disabledTextColor = Color.Black
+                )
             )
-        )
+        }
+
         if (birthdayError) Text("Birthday is required", color = Color.Red, fontSize = 12.sp)
 
         GenderDropdown(gender) {
@@ -131,7 +137,7 @@ fun InitialProfile(
             modifier = Modifier.fillMaxWidth(),
             isError = heightError
         )
-        if (heightError) Text("Height must be between 50 and 300", color = Color.Red, fontSize = 12.sp)
+        if (heightError) Text("Please enter a legal number in the range of 50 - 300 cm.", color = Color.Red, fontSize = 12.sp)
 
         OutlinedTextField(
             value = weight,
@@ -143,7 +149,7 @@ fun InitialProfile(
             modifier = Modifier.fillMaxWidth(),
             isError = weightError
         )
-        if (weightError) Text("Weight must be between 10 and 500", color = Color.Red, fontSize = 12.sp)
+        if (weightError) Text("Please enter a legal number in the range of 30 - 150 kg.", color = Color.Red, fontSize = 12.sp)
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -186,24 +192,31 @@ fun InitialProfile(
 @Composable
 fun GenderDropdown(selectedGender: String, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+    ) {
         OutlinedTextField(
             value = selectedGender,
             onValueChange = {},
             readOnly = true,
+            enabled = false, // 禁用内部行为
             label = { Text("Gender *") },
             trailingIcon = {
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null
-                    )
-                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null
+                )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledBorderColor = Color.Black,
+                disabledLabelColor = Color.Gray,
+                disabledTextColor = Color.Black
+            )
         )
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             listOf("Female", "Male", "Non-binary", "Prefer not to say", "Other").forEach {
                 DropdownMenuItem(text = { Text(it) }, onClick = {

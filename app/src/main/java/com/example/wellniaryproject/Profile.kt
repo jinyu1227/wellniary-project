@@ -30,11 +30,16 @@ import kotlinx.coroutines.launch
 import com.example.wellniaryproject.AppDatabase
 import com.example.wellniaryproject.UserProfile
 import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.tasks.await
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Profile(navController: NavHostController, onLogout: () -> Unit) {
+fun Profile(
+    navController: NavHostController,
+    onLogout: () -> Unit,
+    onOpenReminder: () -> Unit
+) {
     val firebaseUser = FirebaseAuth.getInstance().currentUser
     val uid = firebaseUser?.uid ?: ""
     val email = firebaseUser?.email ?: ""
@@ -47,11 +52,11 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
 
     var displayedUsername by remember { mutableStateOf(email.substringBefore("@")) }
     var editedUsername by remember { mutableStateOf(displayedUsername) }
-    var birthday by remember { mutableStateOf("1999-08-08") }
-    var gender by remember { mutableStateOf("Female") }
-    var state by remember { mutableStateOf("VIC") }
-    var height by remember { mutableStateOf("160") }
-    var weight by remember { mutableStateOf("60") }
+    var birthday by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
 
     var usernameError by remember { mutableStateOf(false) }
     var birthdayError by remember { mutableStateOf(false) }
@@ -77,16 +82,45 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
 
     LaunchedEffect(uid) {
         val local = dao.getProfileByUid(uid)
-        local?.let {
-            displayedUsername = it.username
-            editedUsername = it.username
-            birthday = it.birthday
-            gender = it.gender
-            state = it.state
-            height = it.height
-            weight = it.weight
+        if (local != null) {
+            displayedUsername = local.username
+            editedUsername = local.username
+            birthday = local.birthday
+            gender = local.gender
+            state = local.state
+            height = local.height
+            weight = local.weight
+        } else {
+            // ❗ 如果本地为空，就拉 Firebase 同步
+            val firebaseRef = FirebaseDatabase.getInstance().reference.child("users").child(uid)
+            val snapshot = firebaseRef.get().await()
+            if (snapshot.exists()) {
+                val email = snapshot.child("email").getValue(String::class.java) ?: return@LaunchedEffect
+                val username = snapshot.child("username").getValue(String::class.java) ?: return@LaunchedEffect
+                val birthdayValue = snapshot.child("birthday").getValue(String::class.java) ?: return@LaunchedEffect
+                val genderValue = snapshot.child("gender").getValue(String::class.java) ?: return@LaunchedEffect
+                val stateValue = snapshot.child("state").getValue(String::class.java) ?: ""
+                val heightValue = snapshot.child("height").getValue(String::class.java) ?: return@LaunchedEffect
+                val weightValue = snapshot.child("weight").getValue(String::class.java) ?: return@LaunchedEffect
+
+                val profile = UserProfile(uid, email, username, birthdayValue, genderValue, stateValue, heightValue, weightValue)
+
+                // 存入 Room
+                dao.insertProfile(profile)
+
+                // 显示到 UI
+                displayedUsername = username
+                editedUsername = username
+                birthday = birthdayValue
+                gender = genderValue
+                state = stateValue
+                height = heightValue
+                weight = weightValue
+            }
         }
     }
+
+
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).background(Color(0xFFFAFAFA))
@@ -247,7 +281,7 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
                     heightError = height.toFloatOrNull() == null || height.toFloatOrNull()!! !in 50f..300f
                     weightError = weight.toFloatOrNull() == null || weight.toFloatOrNull()!! !in 10f..500f
 
-                    if (!usernameError && !birthdayError && !genderError && !heightError && !weightError) {
+                    if (!usernameError && !birthdayError && !genderError && !stateError && !heightError && !weightError) {
                         val userProfile = UserProfile(
                             uid = uid,
                             email = email,
@@ -290,8 +324,20 @@ fun Profile(navController: NavHostController, onLogout: () -> Unit) {
             EditableStatBox(weight, "Weight (kg)", editable = !isEditing) { showWeightDialog = true }
         }
 
-        if (heightError) Text("Height must be between 50 and 300 cm.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
-        if (weightError) Text("Weight must be between 10 and 500 kg.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+        if (heightError) Text("Please enter a legal number in the range of 50 - 300 cm.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+        if (weightError) Text("Please enter a legal number in the range of 30 - 150 kg.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { onOpenReminder() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF64B5F6))
+        ) {
+            Text("Health Reminder Settings", fontSize = 16.sp, color = Color.White)
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         Button(

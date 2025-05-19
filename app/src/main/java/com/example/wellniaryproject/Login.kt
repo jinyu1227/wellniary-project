@@ -55,6 +55,29 @@ fun Login(
                 if (authResult.isSuccessful) {
                     val user = auth.currentUser
                     val uid = user?.uid ?: return@addOnCompleteListener
+                    val email = user.email ?: ""
+
+                    val userRef = FirebaseDatabase.getInstance().reference.child("users").child(uid)
+                    userRef.get().addOnSuccessListener { snapshot ->
+                        if (!snapshot.exists()) {
+                            val profile = UserProfile(
+                                uid = uid,
+                                email = email,
+                                username = email.substringBefore("@"),
+                                birthday = "",
+                                gender = "",
+                                state = "",
+                                height = "",
+                                weight = ""
+                            )
+                            userRef.setValue(profile).addOnCompleteListener {
+                                onSuccessLogin() // ✅ 等写完再跳
+                            }
+                        } else {
+                            onSuccessLogin() // ✅ 已有数据，直接跳
+                        }
+                    }
+                    
 
                     onSuccessLogin()
                 } else {
@@ -138,16 +161,15 @@ fun Login(
                         auth.signInWithEmailAndPassword(username, password)
                             .addOnSuccessListener {
                                 val user = auth.currentUser
-                                val uid = user?.uid ?: return@addOnSuccessListener
-                                val userMap = mapOf(
-                                    "name" to (user.displayName ?: ""),
-                                    "email" to (user.email ?: ""),
-                                    "uid" to uid
-                                )
-                                FirebaseDatabase.getInstance().reference
-                                    .child("users").child(uid).setValue(userMap)
-                                onSuccessLogin()
+                                if (user != null) {
+                                    onSuccessLogin() // ✅ 只触发成功登录，不写入数据库
+                                }
                             }
+                            .addOnFailureListener {
+                                Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
+                                loginError = it.localizedMessage ?: "Login failed"
+                            }
+
                             .addOnFailureListener {
                                 Log.e("LoginDebug", "Login failed: ${it.localizedMessage}", it)
                                 loginError = it.localizedMessage ?: "Login failed"

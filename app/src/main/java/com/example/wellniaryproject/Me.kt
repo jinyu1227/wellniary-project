@@ -13,18 +13,80 @@ fun Me(navController: NavHostController) {
     var isLogin by remember { mutableStateOf(true) }
     var needsProfileSetup by remember { mutableStateOf<Boolean?>(null) }
 
+    var showReminderSettings by remember { mutableStateOf(false) }
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            val uid = currentUser!!.uid
+        currentUser?.let { user ->
+            val uid = user.uid
             val db = Room.databaseBuilder(context, AppDatabase::class.java, "my_app_db").build()
             val dao = db.userProfileDao()
-            val profile = dao.getProfileByUid(uid)
-            needsProfileSetup = profile == null
+
+            val localProfile = dao.getProfileByUid(uid)
+
+            val isLocalValid = localProfile != null &&
+                    !localProfile.email.isNullOrBlank() &&
+                    !localProfile.username.isNullOrBlank() &&
+                    !localProfile.birthday.isNullOrBlank() &&
+                    !localProfile.gender.isNullOrBlank() &&
+                    !localProfile.height.isNullOrBlank() &&
+                    !localProfile.weight.isNullOrBlank()
+
+            if (isLocalValid) {
+                needsProfileSetup = false
+            } else {
+                val firebaseRef = com.google.firebase.database.FirebaseDatabase.getInstance()
+                    .reference.child("users").child(uid)
+
+                firebaseRef.get().addOnSuccessListener { snapshot ->
+                    if (snapshot.exists()) {
+                        val email = snapshot.child("email").getValue(String::class.java)
+                        val username = snapshot.child("username").getValue(String::class.java)
+                        val birthday = snapshot.child("birthday").getValue(String::class.java)
+                        val gender = snapshot.child("gender").getValue(String::class.java)
+                        val height = snapshot.child("height").getValue(String::class.java)
+                        val weight = snapshot.child("weight").getValue(String::class.java)
+
+                        val isRemoteValid = !email.isNullOrBlank() &&
+                                !username.isNullOrBlank() &&
+                                !birthday.isNullOrBlank() &&
+                                !gender.isNullOrBlank() &&
+                                !height.isNullOrBlank() &&
+                                !weight.isNullOrBlank()
+
+                        if (isRemoteValid) {
+                            val profile = UserProfile(
+                                uid = uid,
+                                email = email,
+                                username = username,
+                                birthday = birthday,
+                                gender = gender,
+                                state = snapshot.child("state").getValue(String::class.java) ?: "",
+                                height = height,
+                                weight = weight
+                            )
+
+                            scope.launch(Dispatchers.IO) {
+                                dao.insertProfile(profile)
+                            }
+
+                            needsProfileSetup = false
+                        } else {
+                            needsProfileSetup = true
+                        }
+                    } else {
+                        needsProfileSetup = true
+                    }
+                }.addOnFailureListener {
+                    needsProfileSetup = true
+                }
+            }
         }
     }
+
+
 
     when {
         currentUser == null -> {
@@ -68,14 +130,24 @@ fun Me(navController: NavHostController) {
         }
 
         else -> {
-            Profile(
-                navController = navController,
-                onLogout = {
-                    FirebaseAuth.getInstance().signOut()
-                    currentUser = null
-                    isLogin = true
-                }
-            )
+            if (showReminderSettings) {
+                ReminderSettings(
+                    onBack = { showReminderSettings = false }
+                )
+            } else {
+                Profile(
+                    navController = navController,
+                    onLogout = {
+                        FirebaseAuth.getInstance().signOut()
+                        currentUser = null
+                        isLogin = true
+                    },
+                    onOpenReminder = {
+                        showReminderSettings = true
+                    }
+                )
+            }
         }
+
     }
 }

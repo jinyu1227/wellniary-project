@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.wellniaryproject.QuoteApi
 import com.example.wellniaryproject.AppDatabase
 import com.example.wellniaryproject.DailyRecord
 import com.google.firebase.auth.FirebaseAuth
@@ -27,17 +28,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _record = MutableStateFlow<DailyRecord?>(null)
     val record: StateFlow<DailyRecord?> = _record
 
-    // ✅ 每日健康提示
-    private val tips = listOf(
-        "Drink a cup of water when you wake up!",
-        "Take a short walk after meals.",
-        "Avoid sugary drinks when possible.",
-        "Get at least 7 hours of sleep.",
-        "Stretch for 5 minutes every hour.",
-        "Add vegetables to every meal.",
-        "Take deep breaths to relax your mind."
-    )
-    val dailyTip: String = tips[LocalDate.now().dayOfYear % tips.size]
+    // ✅ 每日健康提示（本地）
+//    private val tips = listOf(
+//        "Drink a cup of water when you wake up!",
+//        "Take a short walk after meals.",
+//        "Avoid sugary drinks when possible.",
+//        "Get at least 7 hours of sleep.",
+//        "Stretch for 5 minutes every hour.",
+//        "Add vegetables to every meal.",
+//        "Take deep breaths to relax your mind."
+//    )
+//    val dailyTip: String = tips[LocalDate.now().dayOfYear % tips.size]
+
+    // ✅ 每日一句（ZenQuotes）
+    private val _quote = MutableStateFlow("Loading quote...")
+    val quote: StateFlow<String> = _quote
+
+    fun loadDailyQuote() {
+        viewModelScope.launch {
+            try {
+                val response = QuoteApi.service.getRandomQuote()
+                _quote.value = "\"${response[0].q}\" — ${response[0].a}"
+            } catch (e: Exception) {
+                Log.e("QuoteError", "Failed to fetch quote: ${e.message}")
+                _quote.value = "Stay strong and healthy!" // fallback 文案
+            }
+        }
+    }
 
     fun saveRecord(water: Int, weight: Float) {
         viewModelScope.launch {
@@ -49,7 +66,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val firebaseRef = Firebase.database.reference
             firebaseRef.child("records")
                 .child(uid)
-                .child(today) // ✅ 用日期作为 key 确保不会重复存储
+                .child(today)
                 .setValue(record)
         }
     }

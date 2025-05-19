@@ -38,9 +38,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.wellniaryproject.ui.theme.BottomNavigationBarTheme
 import androidx.core.view.WindowCompat
+import com.example.wellniaryproject.BottomNavigationBar
 import com.example.wellniaryproject.Intake
+import com.example.wellniaryproject.ui.theme.BottomNavigationBarTheme
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
