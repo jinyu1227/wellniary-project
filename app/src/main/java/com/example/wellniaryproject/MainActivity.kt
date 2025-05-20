@@ -39,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.wellniaryproject.ui.theme.Ass3Theme
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -130,6 +131,17 @@ fun BottomNavigationBar(viewModel: UserDataViewModel) {
             composable("report") { Report(navController) }
             composable("me") { Me(navController) }
             composable("dietRecords") { DietRecordsScreen(navController)}
+            composable("achievement") {
+                val healthViewModel: HealthViewModel = viewModel()
+                AchievementSection(navController = navController, viewModel = healthViewModel)
+            }
+            composable("achievement_detail") {
+                val healthViewModel: HealthViewModel = viewModel()
+                AchievementDetailScreen(
+                    healthViewModel = healthViewModel,
+                    navController = navController
+                )
+            }
         }
     }
 
